@@ -84,6 +84,8 @@ func newNotifier() *notifier { return &notifier{notified: make(chan struct{})} }
 // ValidateOptions checks for any incompatible sets of options.
 func (compare *MongoCompare) ValidateOptions() error {
 	switch {
+	case compare.OutputOptions.Out == "-" && compare.ToolOptions.Namespace.Collection == "":
+		return fmt.Errorf("can only compare a single collection to stdout")
 	case compare.ToolOptions.Namespace.DB == "" && compare.ToolOptions.Namespace.Collection != "":
 		return fmt.Errorf("cannot compare a collection without a specified database")
 	case compare.InputOptions.Query != "" && compare.ToolOptions.Namespace.Collection == "":
@@ -845,7 +847,7 @@ func getSortFromArg(queryRaw string) (bson.D, error) {
 	return parsedJSON, nil
 }
 
-func (compare *MongoCompare) getCompareCursor() (*mongo.Cursor, error) {
+func (compare *MongoCompare) getCompareCursor(dbName, collectionName string) (*mongo.Cursor, error) {
 	findOpts := mongoOpt.Find()
 
 	if compare.InputOptions != nil && compare.InputOptions.Sort != "" {
@@ -874,8 +876,9 @@ func (compare *MongoCompare) getCompareCursor() (*mongo.Cursor, error) {
 	if err != nil {
 		return nil, err
 	}
-	intendedDB := session.Database(compare.ToolOptions.Namespace.DB)
-	collection := intendedDB.Collection(compare.ToolOptions.Namespace.Collection)
+	intendedDB := session.Database(dbName)
+
+	collection := intendedDB.Collection(collectionName)
 	collectionInfo, err := db.GetCollectionInfo(collection)
 	if err != nil {
 		log.Logvf(log.Always,
@@ -883,7 +886,7 @@ func (compare *MongoCompare) getCompareCursor() (*mongo.Cursor, error) {
 		return nil, err
 	}
 
-	isMMAPV1, err := db.IsMMAPV1(intendedDB, compare.ToolOptions.Namespace.Collection)
+	isMMAPV1, err := db.IsMMAPV1(intendedDB, collectionName)
 	if err != nil {
 		// if we failed to determine storage engine, there is a good change it is because this
 		// collection is a view. We only want to warn if this collection is not a view, since
@@ -899,7 +902,7 @@ func (compare *MongoCompare) getCompareCursor() (*mongo.Cursor, error) {
 	shouldHintId := isMMAPV1 && (compare.InputOptions == nil || !compare.InputOptions.TableScan)
 	// noSorting is true if the user did not ask for sorting.
 	noSorting := compare.InputOptions == nil || compare.InputOptions.Sort == ""
-	coll := intendedDB.Collection(compare.ToolOptions.Namespace.Collection)
+	coll := intendedDB.Collection(collectionName)
 
 	// we want to hint _id if shouldHintId is true, and there is no query, and
 	// there is no sorting, as hinting is not needed if there is a query or sorting.
@@ -953,7 +956,7 @@ func (compare *MongoCompare) compareData(dbName, tableName string, progressCount
 	resultChan := make(chan Result, compare.OutputOptions.NumComparisonWorkers)
 	go func()() {
 		ctx := context.Background()
-		cursor, err := compare.getCompareCursor()
+		cursor, err := compare.getCompareCursor(dbName, tableName)
 		if err != nil {
 			return
 		}

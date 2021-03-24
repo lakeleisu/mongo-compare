@@ -188,7 +188,7 @@ func (compare *MongoCompare) shouldSkipCollection(colName string) bool {
 func (compare *MongoCompare) outputPath(dbName, colName string) string {
 	var root string
 	if compare.OutputOptions.Out == "" {
-		root = "dump"
+		root = "compare"
 	} else {
 		root = compare.OutputOptions.Out
 	}
@@ -252,7 +252,6 @@ func (compare *MongoCompare) NewIntentFromOptions(dbName string, ci *db.Collecti
 	if compare.OutputOptions.Out == "-" { // regular standard output
 		intent.BSONFile = &stdoutFile{Writer: compare.OutputWriter}
 	} else {
-		//忽略视图
 		if ci.IsView() {
 			delete(intent.Options, "viewOn")
 			delete(intent.Options, "pipeline")

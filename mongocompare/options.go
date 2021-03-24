@@ -25,7 +25,7 @@ See http://docs.mongodb.com/database-tools/mongodump/ for more information.`
 type InputOptions struct {
 	Query          string `long:"query" short:"q" description:"query filter, as a v2 Extended JSON string, e.g., '{\"x\":{\"$gt\":1}}'"`
 	Sort           string `long:"sort" value-name:"<json>" description:"sort order, as a JSON string, e.g. '{x:1}'"`
-	CheckAllDoc	   bool   `long:"checkAllDoc" default:"false" description:"check whether the content of the document is consistent, If it is not set to true, it will only check if _id exists in the target library(default false)"`
+	CheckAllDoc	   bool   `long:"checkAllDoc" description:"check whether the content of the document is consistent, If it is not set to true, it will only check if _id exists in the target library(default false)"`
 	Mode 		   string `long:"mode" value-name:"<type>" default:"dbNum" default-mask:"-" description:"the compare mode, either dbNum/tableNum/index/count/allData/someData/randomData(default dbNum)"`
 	Skip           int64  `long:"skip" value-name:"<count>" description:"number of documents to skip, only be used in someData mode"`
 	Limit          int64  `long:"limit" value-name:"<count>" description:"limit the number of documents query, only be used in someData and random mode"`
@@ -51,6 +51,7 @@ func (inputOptions *InputOptions) GetQuery() ([]byte, error) {
 
 // OutputOptions defines the set of options for writing dump data.
 type OutputOptions struct {
+	Out                        string   `long:"out" value-name:"<directory-path>" short:"o" description:"output directory, or '-' for stdout (default: 'dump')"`
 	ExcludedCollections        []string `long:"excludeCollection" value-name:"<collection-name>" description:"collection to exclude from the dump (may be specified multiple times to exclude additional collections)"`
 	ExcludedCollectionPrefixes []string `long:"excludeCollectionsWithPrefix" value-name:"<collection-prefix>" description:"exclude all collections from the dump that have the given prefix (may be specified multiple times to exclude additional prefixes)"`
 	NumParallelCollections     int      `long:"numParallelCollections" short:"j" description:"number of collections to dump in parallel" default:"4" default-mask:"-"`
